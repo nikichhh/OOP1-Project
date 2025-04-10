@@ -34,4 +34,23 @@ public class FileHandler implements FileOperations {
             System.out.println("Error saving event.");
         }
     }
+
+    @Override
+    public void save(List<String> events) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (String event : events) {
+                writer.write(event);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.out.println("Error saving events.");
+        }
+    }
+
+    @Override
+    public void deleteEvent(String event) {
+        List<String> events = load();
+        events.remove(event);
+        save(events);
+    }
 }
