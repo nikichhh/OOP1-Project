@@ -23,7 +23,7 @@ public class ExtraCommands {
         List<String> allEvents = fileHandler.load();
         for (String event : allEvents) {
             String[] parts = event.split(" ", 6);
-            String date = parts[1];
+            String date = parts[0];
             if (!events.containsKey(date)) {
                 events.put(date, new ArrayList<>());
             }
@@ -39,8 +39,30 @@ public class ExtraCommands {
         fileHandler.save(allEvents);
     }
 
+    private boolean isValidDate(String date) {
+        try {
+            LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isValidTime(String time) {
+        try {
+            LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm"));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public void book(String date, String starttime, String endtime, String name, String note) {
-        String event = String.format("book %s %s %s %s %s", date, starttime, endtime, name, note);
+        if (!isValidDate(date) || !isValidTime(starttime) || !isValidTime(endtime)) {
+            System.out.println("Invalid date or time format.");
+            return;
+        }
+        String event = String.format("%s %s %s %s %s", date, starttime, endtime, name, note);
         if (!events.containsKey(date)) {
             events.put(date, new ArrayList<>());
         }
@@ -50,12 +72,16 @@ public class ExtraCommands {
     }
 
     public void unbook(String date, String starttime, String endtime) {
+        if (!isValidDate(date) || !isValidTime(starttime) || !isValidTime(endtime)) {
+            System.out.println("Invalid date or time format.");
+            return;
+        }
         if (events.containsKey(date)) {
             List<String> dateEvents = events.get(date);
             Iterator<String> iterator = dateEvents.iterator();
             while (iterator.hasNext()) {
                 String event = iterator.next();
-                if (event.startsWith(String.format("book %s %s %s", date, starttime, endtime))) {
+                if (event.startsWith(String.format("%s %s %s", date, starttime, endtime))) {
                     iterator.remove();
                     fileHandler.save(dateEvents);
                     System.out.println("Event unbooked: " + date + " " + starttime + " " + endtime);
@@ -78,26 +104,30 @@ public class ExtraCommands {
     }
 
     public void change(String date, String starttime, String option, String newvalue) {
+        if (!isValidDate(date) || !isValidTime(starttime)) {
+            System.out.println("Invalid date or time format.");
+            return;
+        }
         if (events.containsKey(date)) {
             List<String> dateEvents = events.get(date);
             for (String event : dateEvents) {
-                if (event.startsWith(String.format("book %s %s", date, starttime))) {
+                if (event.startsWith(String.format("%s %s", date, starttime))) {
                     String[] parts = event.split(" ");
                     switch (option) {
                         case "date":
-                            parts[1] = newvalue;
+                            parts[0] = newvalue;
                             break;
                         case "starttime":
-                            parts[2] = newvalue;
+                            parts[1] = newvalue;
                             break;
                         case "endtime":
-                            parts[3] = newvalue;
+                            parts[2] = newvalue;
                             break;
                         case "name":
-                            parts[4] = newvalue;
+                            parts[3] = newvalue;
                             break;
                         case "note":
-                            parts[5] = newvalue;
+                            parts[4] = newvalue;
                             break;
                     }
                     String updatedEvent = String.join(" ", parts);
@@ -128,6 +158,10 @@ public class ExtraCommands {
     }
 
     public void holiday(String date) {
+        if (!isValidDate(date)) {
+            System.out.println("Invalid date format.");
+            return;
+        }
         String event = String.format("holiday %s", date);
         if (!events.containsKey(date)) {
             events.put(date, new ArrayList<>());
@@ -148,10 +182,10 @@ public class ExtraCommands {
             if (events.containsKey(formattedDate)) {
                 int totalHours = 0;
                 for (String event : events.get(formattedDate)) {
-                    if (event.startsWith("book")) {
-                        String[] parts = event.split(" ");
-                        LocalTime startTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
-                        LocalTime endTime = LocalTime.parse(parts[3], DateTimeFormatter.ofPattern("HH:mm"));
+                    String[] parts = event.split(" ");
+                    if (parts.length >= 3) { // Ensure there are enough parts to parse time
+                        LocalTime startTime = LocalTime.parse(parts[1], DateTimeFormatter.ofPattern("HH:mm"));
+                        LocalTime endTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
                         totalHours += ChronoUnit.HOURS.between(startTime, endTime);
                     }
                 }
@@ -166,6 +200,10 @@ public class ExtraCommands {
     }
 
     public void findslot(String fromdate, int hours) {
+        if (!isValidDate(fromdate)) {
+            System.out.println("Invalid date format.");
+            return;
+        }
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate startDate = LocalDate.parse(fromdate, formatter);
 
@@ -176,18 +214,16 @@ public class ExtraCommands {
                 boolean isFree = true;
                 if (events.containsKey(formattedDate)) {
                     for (String event : events.get(formattedDate)) {
-                        if (event.startsWith("book")) {
-                            String[] parts = event.split(" ");
-                            LocalTime startTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
-                            LocalTime endTime = LocalTime.parse(parts[3], DateTimeFormatter.ofPattern("HH:mm"));
-                            if (startTime.isBefore(LocalTime.of(8, 0)) || endTime.isAfter(LocalTime.of(17, 0))) {
-                                continue;
-                            }
-                            int duration = (int) ChronoUnit.HOURS.between(startTime, endTime);
-                            if (duration >= hours) {
-                                isFree = false;
-                                break;
-                            }
+                        String[] parts = event.split(" ");
+                        LocalTime startTime = LocalTime.parse(parts[1], DateTimeFormatter.ofPattern("HH:mm"));
+                        LocalTime endTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
+                        if (startTime.isBefore(LocalTime.of(8, 0)) || endTime.isAfter(LocalTime.of(17, 0))) {
+                            continue;
+                        }
+                        int duration = (int) ChronoUnit.HOURS.between(startTime, endTime);
+                        if (duration >= hours) {
+                            isFree = false;
+                            break;
                         }
                     }
                 }
@@ -201,12 +237,20 @@ public class ExtraCommands {
     }
 
     public void findslotwith(String fromdate, int hours, String calendar) {
+        if (!isValidDate(fromdate)) {
+            System.out.println("Invalid date format.");
+            return;
+        }
         FileHandler otherCalendar = new FileHandler(calendar);
         Map<String, List<String>> otherEvents = new HashMap<>();
         List<String> allOtherEvents = otherCalendar.load();
+        if (allOtherEvents.isEmpty()) {
+            System.out.println("File not found. Creating new file: " + calendar);
+            otherCalendar.save(new ArrayList<>());
+        }
         for (String event : allOtherEvents) {
             String[] parts = event.split(" ", 6);
-            String date = parts[1];
+            String date = parts[0];
             if (!otherEvents.containsKey(date)) {
                 otherEvents.put(date, new ArrayList<>());
             }
@@ -223,35 +267,31 @@ public class ExtraCommands {
                 boolean isFree = true;
                 if (events.containsKey(formattedDate)) {
                     for (String event : events.get(formattedDate)) {
-                        if (event.startsWith("book")) {
-                            String[] parts = event.split(" ");
-                            LocalTime startTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
-                            LocalTime endTime = LocalTime.parse(parts[3], DateTimeFormatter.ofPattern("HH:mm"));
-                            if (startTime.isBefore(LocalTime.of(8, 0)) || endTime.isAfter(LocalTime.of(17, 0))) {
-                                continue;
-                            }
-                            int duration = (int) ChronoUnit.HOURS.between(startTime, endTime);
-                            if (duration >= hours) {
-                                isFree = false;
-                                break;
-                            }
+                        String[] parts = event.split(" ");
+                        LocalTime startTime = LocalTime.parse(parts[1], DateTimeFormatter.ofPattern("HH:mm"));
+                        LocalTime endTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
+                        if (startTime.isBefore(LocalTime.of(8, 0)) || endTime.isAfter(LocalTime.of(17, 0))) {
+                            continue;
+                        }
+                        int duration = (int) ChronoUnit.HOURS.between(startTime, endTime);
+                        if (duration >= hours) {
+                            isFree = false;
+                            break;
                         }
                     }
                 }
                 if (otherEvents.containsKey(formattedDate)) {
                     for (String event : otherEvents.get(formattedDate)) {
-                        if (event.startsWith("book")) {
-                            String[] parts = event.split(" ");
-                            LocalTime startTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
-                            LocalTime endTime = LocalTime.parse(parts[3], DateTimeFormatter.ofPattern("HH:mm"));
-                            if (startTime.isBefore(LocalTime.of(8, 0)) || endTime.isAfter(LocalTime.of(17, 0))) {
-                                continue;
-                            }
-                            int duration = (int) ChronoUnit.HOURS.between(startTime, endTime);
-                            if (duration >= hours) {
-                                isFree = false;
-                                break;
-                            }
+                        String[] parts = event.split(" ");
+                        LocalTime startTime = LocalTime.parse(parts[1], DateTimeFormatter.ofPattern("HH:mm"));
+                        LocalTime endTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
+                        if (startTime.isBefore(LocalTime.of(8, 0)) || endTime.isAfter(LocalTime.of(17, 0))) {
+                            continue;
+                        }
+                        int duration = (int) ChronoUnit.HOURS.between(startTime, endTime);
+                        if (duration >= hours) {
+                            isFree = false;
+                            break;
                         }
                     }
                 }
@@ -268,9 +308,13 @@ public class ExtraCommands {
         FileHandler otherCalendar = new FileHandler(calendar);
         Map<String, List<String>> otherEvents = new HashMap<>();
         List<String> allOtherEvents = otherCalendar.load();
+        if (allOtherEvents.isEmpty()) {
+            System.out.println("File is empty or not found: " + calendar);
+            return;
+        }
         for (String event : allOtherEvents) {
             String[] parts = event.split(" ", 6);
-            String date = parts[1];
+            String date = parts[0];
             if (!otherEvents.containsKey(date)) {
                 otherEvents.put(date, new ArrayList<>());
             }
@@ -287,11 +331,11 @@ public class ExtraCommands {
             for (String event : dateEvents) {
                 if (event.startsWith("book")) {
                     String[] parts = event.split(" ", 6);
-                    String starttime = parts[2];
-                    String endtime = parts[3];
+                    String starttime = parts[1];
+                    String endtime = parts[2];
                     boolean conflict = false;
                     for (String currentEvent : events.get(date)) {
-                        if (currentEvent.startsWith(String.format("book %s %s %s", date, starttime, endtime))) {
+                        if (currentEvent.startsWith(String.format("%s %s %s", date, starttime, endtime))) {
                             conflict = true;
                             System.out.println("Conflict found for event: " + event);
                             System.out.println("Current event: " + currentEvent);
@@ -299,7 +343,7 @@ public class ExtraCommands {
                             System.out.println("1. Keep current event");
                             System.out.println("2. Replace with new event");
                             int choice = scanner.nextInt();
-                            scanner.nextLine(); // Consume newline
+                            scanner.nextLine();
                             if (choice == 2) {
                                 events.get(date).remove(currentEvent);
                                 events.get(date).add(event);
