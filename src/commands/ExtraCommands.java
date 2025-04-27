@@ -183,7 +183,7 @@ public class ExtraCommands {
                 int totalHours = 0;
                 for (String event : events.get(formattedDate)) {
                     String[] parts = event.split(" ");
-                    if (parts.length >= 3) { // Ensure there are enough parts to parse time
+                    if (parts.length >= 3) {
                         LocalTime startTime = LocalTime.parse(parts[1], DateTimeFormatter.ofPattern("HH:mm"));
                         LocalTime endTime = LocalTime.parse(parts[2], DateTimeFormatter.ofPattern("HH:mm"));
                         totalHours += ChronoUnit.HOURS.between(startTime, endTime);
