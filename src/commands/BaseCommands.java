@@ -2,8 +2,6 @@ package commands;
 
 import filehandler.FileHandler;
 
-import java.util.Scanner;
-
 public class BaseCommands {
     private FileHandler fileHandler;
     private String currentFilePath = "data/calendar.txt";
