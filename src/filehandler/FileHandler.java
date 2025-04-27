@@ -19,8 +19,10 @@ public class FileHandler implements FileOperations {
             while ((line = reader.readLine()) != null) {
                 events.add(line);
             }
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found: " + filePath);
         } catch (IOException e) {
-            System.out.println("No events found.");
+            System.out.println("Error reading file: " + filePath);
         }
         return events;
     }
@@ -31,7 +33,7 @@ public class FileHandler implements FileOperations {
             writer.write(event);
             writer.newLine();
         } catch (IOException e) {
-            System.out.println("Error saving event.");
+            System.out.println("Error saving event to file: " + filePath);
         }
     }
 
@@ -43,7 +45,7 @@ public class FileHandler implements FileOperations {
                 writer.newLine();
             }
         } catch (IOException e) {
-            System.out.println("Error saving events.");
+            System.out.println("Error saving events to file: " + filePath);
         }
     }
 
