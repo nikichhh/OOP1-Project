@@ -1,77 +1,60 @@
 package commands;
 
 import filehandler.FileHandler;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class CommandHandler implements CommandExecutor {
-    private BaseCommands baseCommands;
-    private ExtraCommands extraCommands;
+    private final Map<CommandType, Command> commands;
+    private final Map<String, List<String>> events;
+    private FileHandler fileHandler;
+
+    // Refactored command initialization into a separate method
+    private void initializeCommands() {
+        commands.put(CommandType.OPEN, new OpenCommand(this, events));
+        commands.put(CommandType.CLOSE, new CloseCommand(fileHandler, events));
+        commands.put(CommandType.SAVE, new SaveCommand(fileHandler, events));
+        commands.put(CommandType.SAVEAS, new SaveAsCommand(fileHandler, events));
+        commands.put(CommandType.HELP, new HelpCommand());
+        commands.put(CommandType.BOOK, new BookCommand(fileHandler, events));
+        commands.put(CommandType.UNBOOK, new UnbookCommand(fileHandler, events));
+        commands.put(CommandType.AGENDA, new AgendaCommand(fileHandler, events));
+        commands.put(CommandType.CHANGE, new ChangeCommand(fileHandler, events));
+        commands.put(CommandType.FIND, new FindCommand(events));
+        commands.put(CommandType.HOLIDAY, new HolidayCommand(fileHandler, events));
+        commands.put(CommandType.BUSYDAYS, new BusydaysCommand(events));
+        commands.put(CommandType.FINDSLOT, new FindslotCommand(fileHandler, events));
+        commands.put(CommandType.FINDSLOTWITH, new FindslotwithCommand(events));
+        commands.put(CommandType.MERGE, new MergeCommand(fileHandler, events));
+    }
 
     public CommandHandler() {
-        this.baseCommands = new BaseCommands();
-        this.extraCommands = new ExtraCommands(new FileHandler("data/calendar.txt"));
+        this.events = new HashMap<>();
+        this.fileHandler = new FileHandler("data/calendar.txt");
+        this.commands = new HashMap<>();
+        initializeCommands();
     }
 
     @Override
     public void executeCommand(String input) {
-        String[] parts = input.split(" ", 6);
-        String command = parts[0];
-        switch (command.toLowerCase()) {
-            case "open":
-                baseCommands.open(parts[1]);
-                break;
-            case "close":
-                baseCommands.close();
-                break;
-            case "save":
-                baseCommands.save();
-                break;
-            case "saveas":
-                baseCommands.saveAs(parts[1]);
-                break;
-            case "add":
-                baseCommands.addEvent(parts[1]);
-                break;
-            case "show":
-                baseCommands.showEvents();
-                break;
-            case "help":
-                baseCommands.help();
-                break;
-            case "exit":
-                System.out.println("Exiting...");
-                System.exit(0);
-            case "book":
-                extraCommands.book(parts[1], parts[2], parts[3], parts[4], parts[5]);
-                break;
-            case "unbook":
-                extraCommands.unbook(parts[1], parts[2], parts[3]);
-                break;
-            case "agenda":
-                extraCommands.agenda(parts[1]);
-                break;
-            case "change":
-                extraCommands.change(parts[1], parts[2], parts[3], parts[4]);
-                break;
-            case "find":
-                extraCommands.find(parts[1]);
-                break;
-            case "holiday":
-                extraCommands.holiday(parts[1]);
-                break;
-            case "busydays":
-                extraCommands.busydays(parts[1], parts[2]);
-                break;
-            case "findslot":
-                extraCommands.findslot(parts[1], Integer.parseInt(parts[2]));
-                break;
-            case "findslotwith":
-                extraCommands.findslotwith(parts[1], Integer.parseInt(parts[2]), parts[3]);
-                break;
-            case "merge":
-                extraCommands.merge(parts[1]);
-                break;
-            default:
-                System.out.println("Unknown command. Type 'help' for a list of commands.");
+        String[] parts = input.split(" ", 2);
+        try {
+            CommandType commandType = CommandType.valueOf(parts[0].toUpperCase());
+            Command cmd = commands.get(commandType);
+            if (cmd != null) {
+                cmd.execute(parts);
+            } else {
+                System.out.println("Unknown command: " + parts[0]);
+            }
+        } catch (IllegalArgumentException e) {
+            System.out.println("Unknown command: " + parts[0]);
         }
     }
+
+    public void setFileHandler(FileHandler fileHandler) {
+        this.fileHandler = fileHandler;
+        initializeCommands();
+    }
 }
+

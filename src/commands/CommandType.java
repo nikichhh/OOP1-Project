@@ -1,0 +1,5 @@
+package commands;
+
+public enum CommandType {
+    OPEN, CLOSE, SAVE, SAVEAS, HELP, BOOK, UNBOOK, AGENDA, CHANGE, FIND, HOLIDAY, BUSYDAYS, FINDSLOT, FINDSLOTWITH, MERGE;
+}
